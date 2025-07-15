@@ -1,13 +1,20 @@
-# app.py
-
+# Load your transformed data
+# Read and concatenate all files
 import streamlit as st
 import pandas as pd
-import s3fs
 import altair as alt
+import glob
 
-# Load your transformed data
-df = pd.read_parquet("s3://raw-youtube-data-9/youtube_processed/", engine="pyarrow", storage_options={"anon": False})
 
+# Load all Parquet files from the directory
+file_list = glob.glob("outputfiles/*.parquet")
+
+# Read and concatenate all files
+df = pd.concat([pd.read_parquet(f) for f in file_list], ignore_index=True)
+
+# Convert publish_time and derive publish_date
+df['publish_time'] = pd.to_datetime(df['publish_time'])
+df['publish_date'] = df['publish_time'].dt.date
 
 st.title("📊 YouTube Popularity Forecast Dashboard")
 st.markdown("""
@@ -24,8 +31,7 @@ selected_categories = st.sidebar.multiselect(
 )
 
 # Date range filter
-df['publish_date'] = pd.to_datetime(df['publish_date'].astype(str), errors='coerce')
-
+df['publish_date'] = pd.to_datetime(df['publish_date'])
 min_date = df['publish_date'].min()
 max_date = df['publish_date'].max()
 start_date, end_date = st.sidebar.date_input(
